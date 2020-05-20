@@ -36,7 +36,7 @@ function init_misc()
 
 	# enable sdcardfs if /data is not mounted on tmpfs or 9p
 	mount | grep /data\ | grep -qE 'tmpfs|9p'
-	[ $? -ne 0 ] && modprobe sdcardfs
+	[ $? -eq 0 ] && set_prop_if_empty ro.sys.sdcardfs false
 
 	# remove wl if it's not used
 	local wifi
@@ -131,9 +131,13 @@ function init_hal_bluetooth()
 
 function init_hal_camera()
 {
-	case "$PRODUCT" in
-		e-tab*Pro)
+	case "$UEVENT" in
+		*e-tabPro*)
 			set_prop_if_empty hal.camera.0 0,270
+			set_prop_if_empty hal.camera.2 1,90
+			;;
+		*LenovoideapadD330*)
+			set_prop_if_empty hal.camera.0 0,90
 			set_prop_if_empty hal.camera.2 1,90
 			;;
 		*)
@@ -241,7 +245,7 @@ function init_hal_sensors()
 
 	local hal_sensors=kbd
 	local has_sensors=true
-	case "$(cat $DMIPATH/uevent)" in
+	case "$UEVENT" in
 		*Lucid-MWE*)
 			set_property ro.ignore_atkbd 1
 			hal_sensors=hdaps
@@ -298,10 +302,18 @@ function init_hal_sensors()
 			modprobe hdaps
 			hal_sensors=hdaps
 			;;
-		*LINX1010B*)
-			set_property ro.iio.accel.z.opt_scale -1
+		*LenovoideapadD330*)
+			set_property ro.iio.accel.quirks no-trig
+			set_property ro.iio.accel.order 102
 			;&
-		*i7Stylus*|*M80TA*)
+		*LINX1010B*)
+			set_property ro.iio.accel.x.opt_scale -1
+			set_property ro.iio.accel.z.opt_scale -1
+			;;
+		*i7-WN*)
+			set_property ro.iio.accel.quirks no-trig
+			;&
+		*i7Stylus*)
 			set_property ro.iio.accel.x.opt_scale -1
 			;;
 		*LenovoMIIX320*|*ONDATablet*)
@@ -315,10 +327,10 @@ function init_hal_sensors()
 		*ST70416-6*)
 			set_property ro.iio.accel.order 102
 			;;
-		*e-tabPro*|*pnEZpad*)
+		*e-tabPro*|*pnEZpad*|*TECLAST:rntPAD*)
 			set_property ro.iio.accel.quirks no-trig
 			;&
-		*T*0*TA*)
+		*T*0*TA*|*M80TA*)
 			set_property ro.iio.accel.y.opt_scale -1
 			;;
 		*)
@@ -355,11 +367,11 @@ function create_pointercal()
 
 function init_tscal()
 {
-	case "$PRODUCT" in
-		ST70416-6*)
+	case "$UEVENT" in
+		*ST70416-6*)
 			modprobe gslx680_ts_acpi
 			;&
-		T91|T101|ET2002|74499FU|945GSE-ITE8712|CF-19[CDYFGKLP]*)
+		*T91*|*T101*|*ET2002*|*74499FU*|*945GSE-ITE8712*|*CF-19[CDYFGKLP]*|*TECLAST:rntPAD*)
 			create_pointercal
 			return
 			;;
@@ -381,7 +393,7 @@ function init_tscal()
 
 function init_ril()
 {
-	case "$(cat $DMIPATH/uevent)" in
+	case "$UEVENT" in
 		*TEGA*|*2010:svnIntel:*|*Lucid-MWE*)
 			set_property rild.libpath /system/lib/libhuaweigeneric-ril.so
 			set_property rild.libargs "-d /dev/ttyUSB2 -v /dev/ttyUSB1"
@@ -492,7 +504,7 @@ function do_bootcomplete()
 			alsa_amixer -c $c set Speaker 100%
 			alsa_amixer -c $c set Capture 80%
 			alsa_amixer -c $c set Capture cap
-			alsa_amixer -c $c set PCM 100 unmute
+			alsa_amixer -c $c set PCM 100% unmute
 			alsa_amixer -c $c set SPO unmute
 			alsa_amixer -c $c set IEC958 on
 			alsa_amixer -c $c set 'Mic Boost' 1
@@ -508,6 +520,7 @@ PATH=/sbin:/system/bin:/system/xbin
 DMIPATH=/sys/class/dmi/id
 BOARD=$(cat $DMIPATH/board_name)
 PRODUCT=$(cat $DMIPATH/product_name)
+UEVENT=$(cat $DMIPATH/uevent)
 
 # import cmdline variables
 for c in `cat /proc/cmdline`; do
