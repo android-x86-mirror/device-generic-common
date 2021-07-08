@@ -27,6 +27,7 @@ function init_misc()
 	# device information
 	setprop ro.product.manufacturer "$(cat $DMIPATH/sys_vendor)"
 	setprop ro.product.model "$PRODUCT"
+	setprop ro.serialno "$(cat $DMIPATH/product_serial)"
 
 	# a hack for USB modem
 	lsusb | grep 1a8d:1000 && eject
