@@ -531,6 +531,10 @@ function do_bootcomplete()
 		fi
 	done
 
+	for e in /sys/class/input/event*; do
+		[ -c /dev/input/`basename $e` ] || echo add > $e/uevent
+	done
+
 	post_bootcomplete
 }
 
